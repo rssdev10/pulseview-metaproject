@@ -1,0 +1,67 @@
+name: Build PulseView
+
+on:
+  push:
+    branches: [ master ]  # Run on pushes to master by default
+  workflow_dispatch:
+    inputs:
+      PULSEVIEW_REF:
+        description: "PulseView git ref (branch or tag) to build"
+        default: "master"
+      LIBSIGROK_REF:
+        default: "master"
+      LIBSIGROKDECODE_REF:
+        default: "master"
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+    env:  # Pass inputs or default 'master' to the build script
+      PULSEVIEW_REF: ${{ github.event.inputs.PULSEVIEW_REF || 'master' }}
+      LIBSIGROK_REF: ${{ github.event.inputs.LIBSIGROK_REF || 'master' }}
+      LIBSIGROKDECODE_REF: ${{ github.event.inputs.LIBSIGROKDECODE_REF || 'master' }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Linux AppImage
+        run: bash ./scripts/build_linux_appimage.sh
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: PulseView-AppImage
+          path: PulseView-*.AppImage
+
+  build_windows:
+    runs-on: ubuntu-latest
+    env:
+      PULSEVIEW_REF: ${{ github.event.inputs.PULSEVIEW_REF || 'master' }}
+      LIBSIGROK_REF: ${{ github.event.inputs.LIBSIGROK_REF || 'master' }}
+      LIBSIGROKDECODE_REF: ${{ github.event.inputs.LIBSIGROKDECODE_REF || 'master' }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Windows (MXE cross-compile)
+        run: bash ./scripts/build_windows_mxe.sh
+
+      - name: Upload Windows bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: PulseView-Windows
+          path: pulseview-windows-x86_64.zip
+
+  build_macos:
+    # Use macOS ARM64 runner; skip macOS x86_64
+    runs-on: macos-latest  # 'macos-latest' uses Apple Silicon (arm64) for public repos:contentReference[oaicite:1]{index=1}
+    env:
+      PULSEVIEW_REF: ${{ github.event.inputs.PULSEVIEW_REF || 'master' }}
+      LIBSIGROK_REF: ${{ github.event.inputs.LIBSIGROK_REF || 'master' }}
+      LIBSIGROKDECODE_REF: ${{ github.event.inputs.LIBSIGROKDECODE_REF || 'master' }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build macOS .app Bundle
+        run: bash ./scripts/build_macos_bundle.sh
+
+      - name: Upload macOS bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: PulseView-macOS-arm64
+          path: PulseView-macOS-arm64.zip
