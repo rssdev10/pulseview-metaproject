@@ -8,13 +8,13 @@ on:
         required: true
         default: "master"
       libsigrok_repo:
-        description: "libsigrok repository (owner/repo or URL)"
+        description: "libsigrok repository (owner/repo or owner:branch)"
         required: true
-        default: "sigrokproject/libsigrok"
+        default: "rssdev10/libsigrok"
       libsigrok_ref:
         description: "libsigrok ref (branch/tag/SHA)"
         required: true
-        default: "master"
+        default: "siglent_sds800"
       libsigrokdecode_ref:
         description: "libsigrokdecode ref (branch/tag/SHA)"
         required: true
@@ -51,6 +51,8 @@ env:
   LIBSIGROK_REF: ${{ github.event.inputs.libsigrok_ref }}
   LIBSIGROKDECODE_REF: ${{ github.event.inputs.libsigrokdecode_ref }}
   LIBSERIALPORT_REF: ${{ github.event.inputs.libserialport_ref }}
+  SIGROK_CLI_REF: ${{ github.event.inputs.sigrok_cli_ref }}
+  SIGROK_UTIL_REF: ${{ github.event.inputs.sigrok_util_ref }}
   PULSEVIEW_REF: ${{ github.event.inputs.pulseview_ref }}
   DEPS_DIR: ${{ github.workspace }}/deps
   OUT_DIR:  ${{ github.workspace }}/out
@@ -116,8 +118,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            git ca-certificates bash coreutils \
-            docker.io
+            git ca-certificates bash coreutils
 
       - name: Build Windows (MXE) artifact
         run: |
@@ -148,12 +149,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ARM64 GitHub-hosted macOS runners exist (macos-14 arm64).  :contentReference[oaicite:4]{index=4}
+          # ARM64 GitHub-hosted macOS runners exist (macos-14 arm64)
           - target: arm64
             runs_on: macos-14
-          # Intel is still supported via explicit intel labels (evolving). :contentReference[oaicite:5]{index=5}
+          # Intel is supported via macos-13 or macos-latest-large
           - target: amd64
-            runs_on: macos-15-intel
+            runs_on: macos-13
     runs-on: ${{ matrix.runs_on }}
 
     steps:

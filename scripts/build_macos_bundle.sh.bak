@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-source "$(dirname "$0")/common.sh"
+source "$(dirname "$0")/common.sh"  # strict mode + env var defaults
 
+# Detect architecture
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
     MAC_ARCH="amd64"
@@ -10,49 +11,75 @@ else
     BREW_PREFIX="/opt/homebrew"
 fi
 
-log "Building macOS bundle for $MAC_ARCH"
+log "Building macOS bundle for $MAC_ARCH (native arch: $ARCH)"
 
+# Install Homebrew packages for build requirements
 brew install qt@5 glib glibmm libzip libusb hidapi libftdi pkg-config cmake automake libtool python@3 boost libsigc++
 
+# Ensure brew's Qt5 and other libs are found by build tools
 export PATH="$BREW_PREFIX/opt/qt@5/bin:$PATH"
 export PKG_CONFIG_PATH="$BREW_PREFIX/opt/qt@5/lib/pkgconfig:$BREW_PREFIX/opt/glibmm/lib/pkgconfig:$BREW_PREFIX/opt/libsigc++/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 
+# Create build directory
 BUILD_DIR=$(mktemp -d)
 cd "$BUILD_DIR"
 
+# Build and install libserialport (for serial drivers)
 git clone --depth 1 -b "$LIBSERIALPORT_REF" https://github.com/sigrokproject/libserialport.git
-cd libserialport && ./autogen.sh && ./configure --prefix=$BREW_PREFIX
-make -j"$(sysctl -n hw.ncpu)" && sudo make install && cd ..
+cd libserialport
+./autogen.sh && ./configure --prefix=$BREW_PREFIX
+make -j"$(sysctl -n hw.ncpu)" && sudo make install
+cd ..
 
+# Build and install libsigrok with C++ bindings
 clone_repo "$LIBSIGROK_REPO" "$LIBSIGROK_REF" libsigrok
-cd libsigrok && ./autogen.sh && ./configure --prefix=$BREW_PREFIX --enable-cxx
-make -j"$(sysctl -n hw.ncpu)" && sudo make install && cd ..
+cd libsigrok
+./autogen.sh && ./configure --prefix=$BREW_PREFIX --enable-cxx
+make -j"$(sysctl -n hw.ncpu)" && sudo make install
+cd ..
 
+# Build and install libsigrokdecode
 git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/libsigrokdecode.git
-cd libsigrokdecode && ./autogen.sh && ./configure --prefix=$BREW_PREFIX
-make -j"$(sysctl -n hw.ncpu)" && sudo make install && cd ..
+cd libsigrokdecode
+./autogen.sh && ./configure --prefix=$BREW_PREFIX
+make -j"$(sysctl -n hw.ncpu)" && sudo make install
+cd ..
 
+# Build PulseView (Qt application on macOS)
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git
-cd pulseview && mkdir build && cd build
+cd pulseview
+mkdir build && cd build
 cmake -DCMAKE_PREFIX_PATH=$BREW_PREFIX/opt/qt@5 -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Release ..
 make -j"$(sysctl -n hw.ncpu)" && make install
 
+# Package the .app bundle
 cd install
-APP_BUNDLE=$(find . -type d -name "*.app" | head -n 1)
+if [ -d "PulseView.app" ]; then
+    APP_BUNDLE="PulseView.app"
+elif [ -d "pulseview.app" ]; then
+    APP_BUNDLE="pulseview.app"
+else
+    APP_BUNDLE=$(find . -type d -name "*.app" | head -n 1)
+fi
+
 if [ -z "$APP_BUNDLE" ]; then
     log "ERROR: No .app bundle found"
     exit 1
 fi
 
+# Use macdeployqt to bundle dependencies
 $BREW_PREFIX/opt/qt@5/bin/macdeployqt "$APP_BUNDLE" -always-overwrite
 
+# Create output directory and copy bundle
 mkdir -p "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH"
 cp -r "$APP_BUNDLE" "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH/"
 
+# Create DMG if possible
 if command -v hdiutil &> /dev/null; then
     DMG_NAME="PulseView-macOS-$MAC_ARCH.dmg"
     hdiutil create -volname "PulseView" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$DMG_NAME"
     mv "$DMG_NAME" "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH/"
+    log "macOS DMG created: ${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH/$DMG_NAME"
 fi
 
-log "macOS build completed"
+log "macOS build completed: ${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH/$APP_BUNDLE"
