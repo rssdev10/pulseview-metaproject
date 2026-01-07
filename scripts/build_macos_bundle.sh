@@ -12,7 +12,8 @@ fi
 
 log "Building macOS bundle for $MAC_ARCH"
 
-brew install qt@5 glib glibmm libzip libusb hidapi libftdi pkg-config cmake automake libtool python@3 boost libsigc++
+# Install required packages including doxygen for C++ bindings
+brew install qt@5 glib glibmm libzip libusb hidapi libftdi pkg-config cmake automake libtool python@3 boost libsigc++ doxygen
 
 export PATH="$BREW_PREFIX/opt/qt@5/bin:$PATH"
 export PKG_CONFIG_PATH="$BREW_PREFIX/opt/qt@5/lib/pkgconfig:$BREW_PREFIX/opt/glibmm/lib/pkgconfig:$BREW_PREFIX/opt/libsigc++/lib/pkgconfig:${PKG_CONFIG_PATH:-}"

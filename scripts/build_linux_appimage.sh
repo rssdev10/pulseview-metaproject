@@ -11,21 +11,30 @@ esac
 
 log "Building Linux AppImage for $APPIMAGE_ARCH"
 
+# Check if running in container (no sudo)
+if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
+    SUDO=""
+else
+    SUDO="sudo"
+fi
+
 # Install build dependencies on Ubuntu for PulseView and its libs
-sudo apt-get update
-sudo apt-get install -y \
+$SUDO apt-get update
+$SUDO apt-get install -y \
     build-essential cmake pkg-config automake autoconf libtool git wget file \
+    g++ doxygen \
     qtbase5-dev qttools5-dev-tools libqt5svg5-dev \
     libglib2.0-dev libglibmm-2.4-dev libsigc++-2.0-dev \
     libzip-dev libusb-1.0-0-dev libftdi1-dev libhidapi-dev libbluetooth-dev \
-    libserialport-dev libboost-dev python3-dev swig
+    libserialport-dev libboost-dev libboost-filesystem-dev libboost-system-dev libboost-test-dev \
+    python3-dev python3-numpy swig
 
 # Build and install libsigrok (C library with C++ bindings)
 clone_repo "$LIBSIGROK_REPO" "$LIBSIGROK_REF" libsigrok
 cd libsigrok
 ./autogen.sh && ./configure --prefix=/usr/local --enable-cxx
 make -j"$(nproc)" 
-sudo make install  # Install to /usr/local
+$SUDO make install  # Install to /usr/local
 cd ..
 
 # Build and install libsigrokdecode (decoder library)
@@ -33,7 +42,7 @@ git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/l
 cd libsigrokdecode
 ./autogen.sh && ./configure --prefix=/usr/local
 make -j"$(nproc)"
-sudo make install
+$SUDO make install
 cd ..
 
 # Build PulseView (Qt application)
@@ -42,9 +51,10 @@ cd pulseview
 mkdir build && cd build
 # Ensure pkg-config can find the newly installed libs
 export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH:-}"
 cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release ..
 make -j"$(nproc)"
-sudo make install DESTDIR=AppDir  # Install into AppDir for packaging
+$SUDO make install DESTDIR=AppDir  # Install into AppDir for packaging
 
 # Prepare AppImage using linuxdeploy and its Qt plugin
 cd ..

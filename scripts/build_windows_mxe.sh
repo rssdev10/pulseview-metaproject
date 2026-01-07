@@ -3,6 +3,7 @@ source "$(dirname "$0")/common.sh"
 
 log "Building Windows x86_64 using MXE Docker"
 
+# Use skybon/mxe-qt5 which is a maintained MXE image with Qt5
 docker run --rm \
     -v "$(pwd):/work" \
     -w /work \
@@ -11,12 +12,14 @@ docker run --rm \
     -e LIBSIGROKDECODE_REF="$LIBSIGROKDECODE_REF" \
     -e LIBSERIALPORT_REF="$LIBSERIALPORT_REF" \
     -e PULSEVIEW_REF="$PULSEVIEW_REF" \
-    hectorm/mxe:latest \
+    skybon/mxe-qt5:latest \
     bash -c '
         set -euo pipefail
-        export PATH="/mxe/usr/bin:$PATH"
+        export PATH="/usr/lib/mxe/usr/bin:$PATH"
         export TARGET="x86_64-w64-mingw32.static"
-        export PREFIX="/mxe/usr/$TARGET"
+        export PREFIX="/usr/lib/mxe/usr/$TARGET"
+        
+        apt-get update && apt-get install -y git autoconf automake libtool pkg-config
         
         git clone --depth 1 -b "$LIBSERIALPORT_REF" https://github.com/sigrokproject/libserialport.git
         cd libserialport && ./autogen.sh && ./configure --host=$TARGET --prefix=$PREFIX
