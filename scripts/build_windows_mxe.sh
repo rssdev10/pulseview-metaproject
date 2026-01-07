@@ -21,18 +21,18 @@ export PATH=/usr/lib/mxe/usr/bin:$PATH             # Add MXE cross-compiler tool
 export PKG_CONFIG=x86_64-w64-mingw32.static-pkg-config  # Use MXE’s pkg-config for cross builds
 
 # Build and install libserialport for Windows (not provided by MXE packages)
-git clone --depth 1 -b "$LIBSIGROK_REF" https://github.com/sigrokproject/libserialport.git
+git clone --depth 1 -b "$LIBSERIALPORT_REF" https://github.com/sigrokproject/libserialport.git
 cd libserialport
 ./autogen.sh
 ./configure --host=x86_64-w64-mingw32.static --prefix=/usr/lib/mxe/usr/x86_64-w64-mingw32.static
 make -j"$(nproc)" && make install
 cd ..
 
-# Build and install libsigrok (cross)
-git clone --depth 1 -b "$LIBSIGROK_REF" https://github.com/sigrokproject/libsigrok.git
+# Build and install libsigrok (cross) with C++ bindings
+clone_repo "$LIBSIGROK_REPO" "$LIBSIGROK_REF" libsigrok
 cd libsigrok
 ./autogen.sh
-./configure --host=x86_64-w64-mingw32.static --prefix=/usr/lib/mxe/usr/x86_64-w64-mingw32.static
+./configure --host=x86_64-w64-mingw32.static --prefix=/usr/lib/mxe/usr/x86_64-w64-mingw32.static --enable-cxx
 make -j"$(nproc)" && make install
 cd ..
 

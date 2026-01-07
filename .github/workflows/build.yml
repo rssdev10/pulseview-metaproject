@@ -7,6 +7,10 @@ on:
         description: "pulseview ref (branch/tag/SHA)"
         required: true
         default: "master"
+      libsigrok_repo:
+        description: "libsigrok repository (owner/repo or URL)"
+        required: true
+        default: "sigrokproject/libsigrok"
       libsigrok_ref:
         description: "libsigrok ref (branch/tag/SHA)"
         required: true
@@ -43,6 +47,11 @@ concurrency:
 
 env:
   SIGROK_ORG: sigrokproject
+  LIBSIGROK_REPO: ${{ github.event.inputs.libsigrok_repo }}
+  LIBSIGROK_REF: ${{ github.event.inputs.libsigrok_ref }}
+  LIBSIGROKDECODE_REF: ${{ github.event.inputs.libsigrokdecode_ref }}
+  LIBSERIALPORT_REF: ${{ github.event.inputs.libserialport_ref }}
+  PULSEVIEW_REF: ${{ github.event.inputs.pulseview_ref }}
   DEPS_DIR: ${{ github.workspace }}/deps
   OUT_DIR:  ${{ github.workspace }}/out
   # Keep builds deterministic-ish

@@ -4,15 +4,16 @@ source "$(dirname "$0")/common.sh"  # Load common settings (strict mode, env var
 # Install build dependencies on Ubuntu for PulseView and its libs
 sudo apt-get update
 sudo apt-get install -y \
-    build-essential cmake pkg-config automake autoconf libtool git \
+    build-essential cmake pkg-config automake autoconf libtool git wget \
     qtbase5-dev qttools5-dev-tools libqt5svg5-dev \
-    libglib2.0-dev libzip-dev libusb-1.0-0-dev libftdi1-dev libhidapi-dev libbluetooth-dev \
-    libserialport-dev python3-dev
+    libglib2.0-dev libglibmm-2.4-dev libsigc++-2.0-dev \
+    libzip-dev libusb-1.0-0-dev libftdi1-dev libhidapi-dev libbluetooth-dev \
+    libserialport-dev libboost-dev python3-dev
 
-# Build and install libsigrok (C library)
-git clone --depth 1 -b "$LIBSIGROK_REF" https://github.com/sigrokproject/libsigrok.git
+# Build and install libsigrok (C library with C++ bindings)
+clone_repo "$LIBSIGROK_REPO" "$LIBSIGROK_REF" libsigrok
 cd libsigrok
-./autogen.sh && ./configure --prefix=/usr/local
+./autogen.sh && ./configure --prefix=/usr/local --enable-cxx
 make -j"$(nproc)" 
 sudo make install  # Install to /usr/local
 cd ..

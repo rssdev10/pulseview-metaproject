@@ -3,23 +3,23 @@ source "$(dirname "$0")/common.sh"  # strict mode + env var defaults
 
 # Install Homebrew packages for build requirements
 brew update
-brew install qt@5 glib libzip libusb hidapi libftdi pkg-config cmake automake libtool python@3
+brew install qt@5 glib glibmm libzip libusb hidapi libftdi pkg-config cmake automake libtool python@3 boost libsigc++
 
-# Ensure brew’s Qt5 is found by build tools
+# Ensure brew's Qt5 and other libs are found by build tools
 export PATH="/opt/homebrew/opt/qt@5/bin:$PATH"
-export PKG_CONFIG_PATH="${PKG_CONFIG_PATH:-}:/opt/homebrew/opt/qt@5/lib/pkgconfig"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/qt@5/lib/pkgconfig:/opt/homebrew/opt/glibmm/lib/pkgconfig:/opt/homebrew/opt/libsigc++/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 
 # Build and install libserialport (for serial drivers)
-git clone --depth 1 -b "$LIBSIGROK_REF" https://github.com/sigrokproject/libserialport.git
+git clone --depth 1 -b "$LIBSERIALPORT_REF" https://github.com/sigrokproject/libserialport.git
 cd libserialport
 ./autogen.sh && ./configure --prefix=/usr/local
 make -j"$(sysctl -n hw.ncpu)" && sudo make install
 cd ..
 
-# Build and install libsigrok
-git clone --depth 1 -b "$LIBSIGROK_REF" https://github.com/sigrokproject/libsigrok.git
+# Build and install libsigrok with C++ bindings
+clone_repo "$LIBSIGROK_REPO" "$LIBSIGROK_REF" libsigrok
 cd libsigrok
-./autogen.sh && ./configure --prefix=/usr/local
+./autogen.sh && ./configure --prefix=/usr/local --enable-cxx
 make -j"$(sysctl -n hw.ncpu)" && sudo make install
 cd ..
 
