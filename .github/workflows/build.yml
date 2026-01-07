@@ -1,67 +1,170 @@
-name: Build PulseView
+name: Build PulseView (multi-platform)
 
 on:
-  push:
-    branches: [ master ]  # Run on pushes to master by default
   workflow_dispatch:
     inputs:
-      PULSEVIEW_REF:
-        description: "PulseView git ref (branch or tag) to build"
+      pulseview_ref:
+        description: "pulseview ref (branch/tag/SHA)"
+        required: true
         default: "master"
-      LIBSIGROK_REF:
+      libsigrok_ref:
+        description: "libsigrok ref (branch/tag/SHA)"
+        required: true
         default: "master"
-      LIBSIGROKDECODE_REF:
+      libsigrokdecode_ref:
+        description: "libsigrokdecode ref (branch/tag/SHA)"
+        required: true
         default: "master"
+      libserialport_ref:
+        description: "libserialport ref (branch/tag/SHA)"
+        required: true
+        default: "master"
+      sigrok_cli_ref:
+        description: "sigrok-cli ref (branch/tag/SHA) (optional, but commonly needed in bundles)"
+        required: true
+        default: "master"
+      sigrok_util_ref:
+        description: "sigrok-util ref (branch/tag/SHA)"
+        required: true
+        default: "master"
+
+      # Optional toggles
+      build_windows_arm64:
+        description: "Build Windows arm64 (requires self-hosted runner/toolchain; default false)"
+        required: true
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pulseview-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pulseview_ref }}
+  cancel-in-progress: false
+
+env:
+  SIGROK_ORG: sigrokproject
+  DEPS_DIR: ${{ github.workspace }}/deps
+  OUT_DIR:  ${{ github.workspace }}/out
+  # Keep builds deterministic-ish
+  CMAKE_BUILD_PARALLEL_LEVEL: "3"
 
 jobs:
-  build_linux:
-    runs-on: ubuntu-latest
-    env:  # Pass inputs or default 'master' to the build script
-      PULSEVIEW_REF: ${{ github.event.inputs.PULSEVIEW_REF || 'master' }}
-      LIBSIGROK_REF: ${{ github.event.inputs.LIBSIGROK_REF || 'master' }}
-      LIBSIGROKDECODE_REF: ${{ github.event.inputs.LIBSIGROKDECODE_REF || 'master' }}
+  linux_appimage:
+    name: Linux AppImage (${{ matrix.arch }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
     steps:
-      - uses: actions/checkout@v3
-      - name: Build Linux AppImage
-        run: bash ./scripts/build_linux_appimage.sh
+      - uses: actions/checkout@v4
 
-      - name: Upload Linux AppImage
+      - name: Install host prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git ca-certificates bash coreutils \
+            python3 python3-pip \
+            qemu-user-static binfmt-support
+
+      - name: Build AppImage (native x86_64)
+        if: matrix.arch == 'x86_64'
+        env:
+          TARGET_ARCH: x86_64
+        run: |
+          bash scripts/build_linux_appimage.sh
+
+      - name: Build AppImage (emulated aarch64)
+        if: matrix.arch == 'aarch64'
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: aarch64
+          distro: ubuntu22.04
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update
+            apt-get install -y --no-install-recommends \
+              git ca-certificates bash coreutils \
+              python3 python3-pip \
+              build-essential curl file patchelf
+          run: |
+            bash scripts/build_linux_appimage.sh
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PulseView-AppImage
-          path: PulseView-*.AppImage
+          name: pulseview-linux-${{ matrix.arch }}
+          path: out/linux/${{ matrix.arch }}/*
+          if-no-files-found: error
 
-  build_windows:
-    runs-on: ubuntu-latest
-    env:
-      PULSEVIEW_REF: ${{ github.event.inputs.PULSEVIEW_REF || 'master' }}
-      LIBSIGROK_REF: ${{ github.event.inputs.LIBSIGROK_REF || 'master' }}
-      LIBSIGROKDECODE_REF: ${{ github.event.inputs.LIBSIGROKDECODE_REF || 'master' }}
+  windows_mxe_amd64:
+    name: Windows (MXE, amd64)
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - name: Build Windows (MXE cross-compile)
-        run: bash ./scripts/build_windows_mxe.sh
+      - uses: actions/checkout@v4
 
-      - name: Upload Windows bundle
+      - name: Install host prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git ca-certificates bash coreutils \
+            docker.io
+
+      - name: Build Windows (MXE) artifact
+        run: |
+          bash scripts/build_windows_mxe.sh
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PulseView-Windows
-          path: pulseview-windows-x86_64.zip
+          name: pulseview-windows-amd64
+          path: out/windows/amd64/*
+          if-no-files-found: error
 
-  build_macos:
-    # Use macOS ARM64 runner; skip macOS x86_64
-    runs-on: macos-latest  # 'macos-latest' uses Apple Silicon (arm64) for public repos:contentReference[oaicite:1]{index=1}
-    env:
-      PULSEVIEW_REF: ${{ github.event.inputs.PULSEVIEW_REF || 'master' }}
-      LIBSIGROK_REF: ${{ github.event.inputs.LIBSIGROK_REF || 'master' }}
-      LIBSIGROKDECODE_REF: ${{ github.event.inputs.LIBSIGROKDECODE_REF || 'master' }}
+  windows_arm64_placeholder:
+    name: Windows arm64 (placeholder)
+    if: ${{ github.event.inputs.build_windows_arm64 == 'true' }}
+    runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Build macOS .app Bundle
-        run: bash ./scripts/build_macos_bundle.sh
+      - run: |
+          echo "Windows arm64 build is not implemented for GitHub-hosted runners."
+          echo "Typical options:"
+          echo "  - self-hosted Windows ARM64 runner + MSVC toolchain"
+          echo "  - or cross-compile with clang/llvm + vcpkg and an ARM64 sysroot"
+          exit 1
 
-      - name: Upload macOS bundle
+  macos:
+    name: macOS (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ARM64 GitHub-hosted macOS runners exist (macos-14 arm64).  :contentReference[oaicite:4]{index=4}
+          - target: arm64
+            runs_on: macos-14
+          # Intel is still supported via explicit intel labels (evolving). :contentReference[oaicite:5]{index=5}
+          - target: amd64
+            runs_on: macos-15-intel
+    runs-on: ${{ matrix.runs_on }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install prerequisites (Homebrew)
+        run: |
+          brew update
+          brew install git cmake ninja pkg-config autoconf automake libtool gettext glib glibmm \
+                       libzip libusb libftdi boost python@3.11 qt@5
+
+      - name: Build macOS bundle
+        env:
+          MAC_TARGET: ${{ matrix.target }}
+        run: |
+          bash scripts/build_macos_bundle.sh
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PulseView-macOS-arm64
-          path: PulseView-macOS-arm64.zip
+          name: pulseview-macos-${{ matrix.target }}
+          path: out/macos/${{ matrix.target }}/*
+          if-no-files-found: error
