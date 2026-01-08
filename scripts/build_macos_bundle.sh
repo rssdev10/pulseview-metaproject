@@ -30,7 +30,7 @@ cd libsigrok && ./autogen.sh && ./configure --prefix=$BREW_PREFIX --enable-cxx
 make -j"$(sysctl -n hw.ncpu)" && sudo make install && cd ..
 
 git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/libsigrokdecode.git
-cd libsigrokdecode && ./autogen.sh && ./configure --prefix=$BREW_PREFIX
+cd libsigrokdecode && ./autogen.sh && ./configure --prefix=$BREW_PREFIX --disable-python
 make -j"$(sysctl -n hw.ncpu)" && sudo make install && cd ..
 
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git

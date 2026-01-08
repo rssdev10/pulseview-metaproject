@@ -22,6 +22,7 @@ make -j$(nproc) \
     cc \
     qtbase \
     qtsvg \
+    glibmm \
     boost \
     glib \
     libzip \
@@ -60,7 +61,7 @@ log "Building libsigrokdecode (optional)..."
 git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/libsigrokdecode.git
 cd libsigrokdecode
 ./autogen.sh
-./configure --host=$TARGET --prefix=$PREFIX || true
+./configure --host=$TARGET --prefix=$PREFIX --disable-python || true
 make -j$(nproc) && make install || true
 cd ..
 
@@ -68,6 +69,9 @@ log "Building PulseView..."
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git
 cd pulseview
 mkdir build && cd build
+
+# Ensure pkg-config can see MXE-built libraries
+export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 
 # Use MXE's CMake wrapper
 $TARGET-cmake \

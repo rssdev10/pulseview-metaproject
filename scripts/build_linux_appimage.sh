@@ -56,7 +56,8 @@ export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH:-}"
 cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release ..
 make -j"$(nproc)"
-$SUDO make install DESTDIR=AppDir  # Install into AppDir for packaging
+# Install into AppDir for packaging (no sudo so files are user-writable)
+make install DESTDIR=AppDir
 
 # Prepare AppImage using linuxdeploy and its Qt plugin
 cd ..
