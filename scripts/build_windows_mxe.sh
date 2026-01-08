@@ -65,7 +65,7 @@ git clone --depth 1 -b "$LIBSERIALPORT_REF" https://github.com/sigrokproject/lib
 cd libserialport
 ./autogen.sh
 ./configure --host=$TARGET --prefix=$PREFIX
-make -j$(nproc) && make install
+make -j$(nproc) && sudo make install
 cd ..
 
 log "Building libsigrok..."
@@ -77,7 +77,7 @@ fi
 cd libsigrok
 ./autogen.sh
 ./configure --host=$TARGET --prefix=$PREFIX --enable-cxx
-make -j$(nproc) && make install
+make -j$(nproc) && sudo make install
 
 # Verify C++ bindings were built
 if [ ! -f "$PREFIX/lib/pkgconfig/libsigrokcxx.pc" ]; then
