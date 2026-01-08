@@ -112,28 +112,15 @@ jobs:
 
   windows_mxe_amd64:
     name: Windows (MXE, amd64)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    container:
+      image: mxe/mxe:master
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install MXE from apt (Ubuntu 20.04)
+      - name: Build Windows (MXE) artifact (Docker)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            git ca-certificates bash coreutils pkg-config \
-            mxe-x86-64-w64-mingw32.static-cc \
-            mxe-x86-64-w64-mingw32.static-glib \
-            mxe-x86-64-w64-mingw32.static-glibmm \
-            mxe-x86-64-w64-mingw32.static-boost \
-            mxe-x86-64-w64-mingw32.static-qtbase \
-            mxe-x86-64-w64-mingw32.static-qtsvg \
-            mxe-x86-64-w64-mingw32.static-libzip \
-            mxe-x86-64-w64-mingw32.static-libusb1 \
-            mxe-x86-64-w64-mingw32.static-libftdi1
-
-      - name: Build Windows (MXE) artifact
-        run: |
-          bash scripts/build_windows_mxe_apt.sh
+          bash scripts/build_windows_mxe_docker.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
