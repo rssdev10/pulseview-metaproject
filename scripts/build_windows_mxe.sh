@@ -48,6 +48,7 @@ if [ ! -d "$MXE_DIR" ]; then
     log "✓ MXE built. Copying to /opt/mxe for caching..."
     sudo mkdir -p /opt
     sudo cp -r . "$MXE_DIR"
+    sudo chown -R $(whoami):$(whoami) "$MXE_DIR"  # Fix permissions so we can install into it
 else
     log "✓ Using cached MXE toolchain from $MXE_DIR"
 fi
@@ -57,6 +58,13 @@ export PATH="$MXE_DIR/usr/bin:$PATH"
 export TARGET="x86_64-w64-mingw32.static"
 export PREFIX="$MXE_DIR/usr/$TARGET"
 
+# Ensure MXE is in PATH
+if ! command -v x86_64-w64-mingw32.static-gcc &> /dev/null; then
+    log "ERROR: MXE gcc not found in PATH"
+    exit 1
+fi
+log "✓ MXE toolchain active: $(which x86_64-w64-mingw32.static-gcc)"
+
 # Go back to workspace
 cd "$GITHUB_WORKSPACE" || cd "$(pwd)"
 
@@ -65,7 +73,7 @@ git clone --depth 1 -b "$LIBSERIALPORT_REF" https://github.com/sigrokproject/lib
 cd libserialport
 ./autogen.sh
 ./configure --host=$TARGET --prefix=$PREFIX
-make -j$(nproc) && sudo make install
+make -j$(nproc) && make install
 cd ..
 
 log "Building libsigrok..."
@@ -77,7 +85,7 @@ fi
 cd libsigrok
 ./autogen.sh
 ./configure --host=$TARGET --prefix=$PREFIX --enable-cxx
-make -j$(nproc) && sudo make install
+make -j$(nproc) && make install
 
 # Verify C++ bindings were built
 if [ ! -f "$PREFIX/lib/pkgconfig/libsigrokcxx.pc" ]; then
@@ -103,6 +111,7 @@ export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 $TARGET-cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=install \
+    -DDISABLE_DECODER=ON \
     ..
 
 make -j$(nproc) && make install

@@ -35,7 +35,7 @@ log "Skipping libsigrokdecode (requires Python framework, causes dyld errors)"
 
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git
 cd pulseview && mkdir build && cd build
-cmake -DCMAKE_PREFIX_PATH=$BREW_PREFIX/opt/qt@5 -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Release ..
+cmake -DCMAKE_PREFIX_PATH=$BREW_PREFIX/opt/qt@5 -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Release -DDISABLE_DECODER=ON ..
 make -j"$(sysctl -n hw.ncpu)" && make install
 
 cd install
