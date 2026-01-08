@@ -49,6 +49,8 @@ cd ..
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git
 cd pulseview
 mkdir build && cd build
+# Remove any existing AppDir to avoid conflicts
+rm -rf AppDir
 # Ensure pkg-config can find the newly installed libs
 export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH:-}"
@@ -74,14 +76,11 @@ wget -q "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous
 wget -q "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-$LINUXDEPLOY_ARCH.AppImage"
 chmod +x linuxdeploy-*.AppImage
 
-# Remove any existing AppDir to avoid conflicts
-rm -rf build/AppDir
-
 ./linuxdeploy-$LINUXDEPLOY_ARCH.AppImage --appimage-extract-and-run \
     --appdir build/AppDir \
     --executable build/pulseview \
-    --desktop-file=$GITHUB_WORKSPACE/pulseview/contrib/org.sigrok.PulseView.desktop \
-    --icon-file=$GITHUB_WORKSPACE/pulseview/icons/pulseview.png \
+    --desktop-file=contrib/org.sigrok.PulseView.desktop \
+    --icon-file=icons/pulseview.png \
     --plugin qt \
     --output appimage
 
