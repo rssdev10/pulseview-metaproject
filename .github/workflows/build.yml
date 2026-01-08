@@ -112,29 +112,28 @@ jobs:
 
   windows_mxe_amd64:
     name: Windows (MXE, amd64)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install host prerequisites
+      - name: Install MXE from apt (Ubuntu 20.04)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            git ca-certificates bash coreutils autoconf automake libtool libtool-bin pkg-config \
-            autopoint gperf intltool lzip python3-mako
-
-      - name: Cache MXE toolchain
-        uses: actions/cache@v4
-        id: cache-mxe
-        with:
-          path: /tmp/mxe
-          key: mxe-${{ runner.os }}-x86_64-w64-mingw32-static-${{ hashFiles('scripts/build_windows_mxe.sh') }}
-          restore-keys: |
-            mxe-${{ runner.os }}-x86_64-w64-mingw32-static-
+            git ca-certificates bash coreutils pkg-config \
+            mxe-x86-64-w64-mingw32.static-cc \
+            mxe-x86-64-w64-mingw32.static-glib \
+            mxe-x86-64-w64-mingw32.static-glibmm \
+            mxe-x86-64-w64-mingw32.static-boost \
+            mxe-x86-64-w64-mingw32.static-qtbase \
+            mxe-x86-64-w64-mingw32.static-qtsvg \
+            mxe-x86-64-w64-mingw32.static-libzip \
+            mxe-x86-64-w64-mingw32.static-libusb1 \
+            mxe-x86-64-w64-mingw32.static-libftdi1
 
       - name: Build Windows (MXE) artifact
         run: |
-          bash scripts/build_windows_mxe.sh
+          bash scripts/build_windows_mxe_apt.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
