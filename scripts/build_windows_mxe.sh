@@ -9,25 +9,27 @@ cd /tmp
 if [ ! -d "/tmp/mxe" ]; then
     log "Cloning MXE repository..."
     git clone --depth 1 https://github.com/mxe/mxe.git
+    cd mxe
+    
+    log "Building MXE toolchain (this will take 20-30 minutes)..."
+    
+    # Build only the packages we need
+    make -j$(nproc) \
+        MXE_TARGETS='x86_64-w64-mingw32.static' \
+        MXE_PLUGIN_DIRS='plugins/gcc13' \
+        cc \
+        qtbase \
+        qtsvg \
+        glibmm \
+        boost \
+        glib \
+        libzip \
+        libusb1 \
+        libftdi1
+else
+    log "Using cached MXE toolchain from /tmp/mxe"
+    cd mxe
 fi
-
-cd mxe
-
-log "Building MXE toolchain (this will take 20-30 minutes)..."
-
-# Build only the packages we need
-make -j$(nproc) \
-    MXE_TARGETS='x86_64-w64-mingw32.static' \
-    MXE_PLUGIN_DIRS='plugins/gcc13' \
-    cc \
-    qtbase \
-    qtsvg \
-    glibmm \
-    boost \
-    glib \
-    libzip \
-    libusb1 \
-    libftdi1
 
 # Set up environment
 export PATH="/tmp/mxe/usr/bin:$PATH"
@@ -57,13 +59,9 @@ cd libsigrok
 make -j$(nproc) && make install
 cd ..
 
-log "Building libsigrokdecode (optional)..."
-git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/libsigrokdecode.git
-cd libsigrokdecode
-./autogen.sh
-./configure --host=$TARGET --prefix=$PREFIX --disable-python || true
-make -j$(nproc) && make install || true
-cd ..
+# Skip libsigrokdecode on Windows - it requires Python headers
+# PulseView will build without protocol decoder support
+log "Skipping libsigrokdecode (requires Python, not available on Windows static build)..."
 
 log "Building PulseView..."
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git

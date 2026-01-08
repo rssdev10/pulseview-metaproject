@@ -123,6 +123,15 @@ jobs:
             git ca-certificates bash coreutils autoconf automake libtool libtool-bin pkg-config \
             autopoint gperf intltool lzip python3-mako
 
+      - name: Cache MXE toolchain
+        uses: actions/cache@v4
+        id: cache-mxe
+        with:
+          path: /tmp/mxe
+          key: mxe-${{ runner.os }}-x86_64-w64-mingw32-static-${{ hashFiles('scripts/build_windows_mxe.sh') }}
+          restore-keys: |
+            mxe-${{ runner.os }}-x86_64-w64-mingw32-static-
+
       - name: Build Windows (MXE) artifact
         run: |
           bash scripts/build_windows_mxe.sh
