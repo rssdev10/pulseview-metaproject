@@ -120,7 +120,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            git ca-certificates bash coreutils
+            git ca-certificates bash coreutils autoconf automake libtool pkg-config \
+            autopoint gperf intltool lzip python3-mako
 
       - name: Build Windows (MXE) artifact
         run: |
