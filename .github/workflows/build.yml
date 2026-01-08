@@ -113,14 +113,31 @@ jobs:
   windows_mxe_amd64:
     name: Windows (MXE, amd64)
     runs-on: ubuntu-22.04
-    container:
-      image: mxe/mxe:master
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Windows (MXE) artifact (Docker)
+      - name: Install host prerequisites
         run: |
-          bash scripts/build_windows_mxe_docker.sh
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git ca-certificates bash coreutils autoconf automake libtool libtool-bin pkg-config \
+            autopoint gperf intltool lzip python3-mako ccache
+
+      - name: Cache MXE build
+        uses: actions/cache@v4
+        id: cache-mxe
+        with:
+          path: /opt/mxe
+          key: mxe-ubuntu22-x86_64-w64-mingw32-static-v2-${{ hashFiles('scripts/build_windows_mxe.sh') }}
+          restore-keys: |
+            mxe-ubuntu22-x86_64-w64-mingw32-static-v2-
+
+      - name: Build Windows (MXE) artifact
+        env:
+          CCACHE_DIR: /tmp/ccache
+          CCACHE_MAXSIZE: "2G"
+        run: |
+          bash scripts/build_windows_mxe.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

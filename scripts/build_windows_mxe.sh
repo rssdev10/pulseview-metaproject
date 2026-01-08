@@ -1,41 +1,61 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/common.sh"
 
-log "Building Windows x86_64 by compiling MXE from source"
+log "Building Windows x86_64 using MXE (optimized for CI speed)"
 
-# MXE apt repository is broken, so we build from source
-cd /tmp
+# Build/cache location - use /opt/mxe so it's on the root disk (faster than /tmp)
+MXE_DIR="/opt/mxe"
 
-if [ ! -d "/tmp/mxe" ]; then
+# Check if MXE is already cached/built
+if [ ! -d "$MXE_DIR" ]; then
+    log "Building MXE from source (will be cached for future runs)..."
+    cd /tmp
+    
     log "Cloning MXE repository..."
+    rm -rf mxe 2>/dev/null
     git clone --depth 1 https://github.com/mxe/mxe.git
     cd mxe
     
-    log "Building MXE toolchain (this will take 20-30 minutes)..."
+    log "Building MXE toolchain (this takes ~15-20 minutes, then cached)..."
     
-    # Build only the packages we need
-    # Note: Order matters - dependencies must come before dependent packages
+    # Use ccache to speed up compilation on rebuild
+    export CCACHE_DIR="${CCACHE_DIR:-/tmp/ccache}"
+    mkdir -p "$CCACHE_DIR"
+    
+    # Build only what we need - the key optimization for speed
+    # Skip: doc, fonts, nsis, imagemagick, opencv, etc.
+    # Keep only: gcc, glib, glibmm, boost, qt5, libusb, libftdi, libzip
     make -j$(nproc) \
         MXE_TARGETS='x86_64-w64-mingw32.static' \
         MXE_PLUGIN_DIRS='plugins/gcc13' \
+        JOBS=$(nproc) \
         cc \
         glib \
         glibmm \
         boost \
-        qtbase \
-        qtsvg \
         libzip \
         libusb1 \
-        libftdi1
+        libftdi1 \
+        qtbase \
+        qtsvg
+    
+    # Verify critical components
+    if [ ! -f "usr/bin/x86_64-w64-mingw32.static-gcc" ]; then
+        log "ERROR: MXE build failed - gcc not found"
+        exit 1
+    fi
+    
+    log "✓ MXE built. Copying to /opt/mxe for caching..."
+    sudo mkdir -p /opt
+    sudo cp -r . "$MXE_DIR"
 else
-    log "Using cached MXE toolchain from /tmp/mxe"
-    cd mxe
+    log "✓ Using cached MXE toolchain from $MXE_DIR"
 fi
 
 # Set up environment
-export PATH="/tmp/mxe/usr/bin:$PATH"
+export PATH="$MXE_DIR/usr/bin:$PATH"
 export TARGET="x86_64-w64-mingw32.static"
-export PREFIX="/tmp/mxe/usr/$TARGET"
+export PREFIX="$MXE_DIR/usr/$TARGET"
 
 # Go back to workspace
 cd "$GITHUB_WORKSPACE" || cd "$(pwd)"
@@ -65,11 +85,10 @@ if [ ! -f "$PREFIX/lib/pkgconfig/libsigrokcxx.pc" ]; then
     ls -la "$PREFIX/lib/pkgconfig/" || true
     exit 1
 fi
-log "✓ libsigrokcxx.pc found at $PREFIX/lib/pkgconfig/libsigrokcxx.pc"
+log "✓ libsigrokcxx.pc found"
 cd ..
 
 # Skip libsigrokdecode on Windows - it requires Python headers
-# PulseView will build without protocol decoder support
 log "Skipping libsigrokdecode (requires Python, not available on Windows static build)..."
 
 log "Building PulseView..."
@@ -94,4 +113,4 @@ mkdir -p "${OUT_DIR:-$HOME/out}/windows/amd64"
 cd install
 zip -r "${OUT_DIR:-$HOME/out}/windows/amd64/PulseView-Windows-x86_64.zip" .
 
-log "Windows build completed successfully"
+log "✓ Windows build completed successfully"
