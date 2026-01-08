@@ -23,7 +23,7 @@ $SUDO apt-get update
 $SUDO apt-get install -y \
     build-essential cmake pkg-config automake autoconf libtool git wget file \
     g++ doxygen \
-    qtbase5-dev qttools5-dev-tools libqt5svg5-dev \
+    qtbase5-dev qttools5-dev qttools5-dev-tools libqt5svg5-dev \
     libglib2.0-dev libglibmm-2.4-dev libsigc++-2.0-dev \
     libzip-dev libusb-1.0-0-dev libftdi1-dev libhidapi-dev libbluetooth-dev \
     libserialport-dev libboost-dev libboost-filesystem-dev libboost-system-dev libboost-test-dev \

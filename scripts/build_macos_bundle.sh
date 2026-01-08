@@ -39,9 +39,37 @@ cmake -DCMAKE_PREFIX_PATH=$BREW_PREFIX/opt/qt@5 -DCMAKE_INSTALL_PREFIX=install -
 make -j"$(sysctl -n hw.ncpu)" && make install
 
 cd install
-APP_BUNDLE=$(find . -type d -name "*.app" | head -n 1)
-if [ -z "$APP_BUNDLE" ]; then
-    log "ERROR: No .app bundle found"
+
+# Create .app bundle from the binary (PulseView doesn't create it by default)
+if [ ! -d "PulseView.app" ] && [ -f "bin/pulseview" ]; then
+    log "Creating PulseView.app bundle"
+    mkdir -p PulseView.app/Contents/MacOS
+    cp bin/pulseview PulseView.app/Contents/MacOS/
+    
+    # Create Info.plist
+    cat > PulseView.app/Contents/Info.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>pulseview</string>
+    <key>CFBundleIdentifier</key>
+    <string>org.sigrok.PulseView</string>
+    <key>CFBundleName</key>
+    <string>PulseView</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.5.0</string>
+</dict>
+</plist>
+EOF
+fi
+
+APP_BUNDLE="PulseView.app"
+if [ ! -d "$APP_BUNDLE" ]; then
+    log "ERROR: Failed to create .app bundle"
     exit 1
 fi
 
