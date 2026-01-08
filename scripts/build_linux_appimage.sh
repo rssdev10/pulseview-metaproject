@@ -26,7 +26,7 @@ $SUDO apt-get install -y \
     qtbase5-dev qttools5-dev qttools5-dev-tools libqt5svg5-dev \
     libglib2.0-dev libglibmm-2.4-dev libsigc++-2.0-dev \
     libzip-dev libusb-1.0-0-dev libftdi1-dev libhidapi-dev libbluetooth-dev \
-    libserialport-dev libboost-dev libboost-filesystem-dev libboost-system-dev libboost-test-dev \
+    libserialport-dev libboost-dev libboost-filesystem-dev libboost-system-dev libboost-test-dev libboost-serialization-dev \
     python3-dev python3-numpy swig
 
 # Build and install libsigrok (C library with C++ bindings)

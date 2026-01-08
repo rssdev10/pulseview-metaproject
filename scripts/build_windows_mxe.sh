@@ -1,48 +1,42 @@
 #!/usr/bin/env bash
 source "$(dirname "$0")/common.sh"
 
-log "Building Windows x86_64 using MXE (native)"
+log "Building Windows x86_64 by compiling MXE from source"
 
-# Install MXE from official repository
-sudo apt-get update
-sudo apt-get install -y software-properties-common lsb-release wget gnupg
+# MXE apt repository is broken, so we build from source
+cd /tmp
 
-# Add MXE repository
-wget -qO- https://pkg.mxe.cc/repos/apt/client-conf/mxeapt.gpg | sudo gpg --dearmor -o /usr/share/keyrings/mxeapt.gpg
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/mxeapt.gpg] https://pkg.mxe.cc/repos/apt $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/mxeapt.list
+if [ ! -d "/tmp/mxe" ]; then
+    log "Cloning MXE repository..."
+    git clone --depth 1 https://github.com/mxe/mxe.git
+fi
 
-sudo apt-get update
+cd mxe
 
-# Install minimal MXE toolchain for static builds
-sudo apt-get install -y \
-    mxe-x86-64-w64-mingw32.static-cc \
-    mxe-x86-64-w64-mingw32.static-qtbase \
-    mxe-x86-64-w64-mingw32.static-qtsvg \
-    mxe-x86-64-w64-mingw32.static-boost \
-    mxe-x86-64-w64-mingw32.static-glib \
-    mxe-x86-64-w64-mingw32.static-libzip \
-    mxe-x86-64-w64-mingw32.static-libusb1 \
-    mxe-x86-64-w64-mingw32.static-libftdi1 || {
-    log "WARNING: Some MXE packages failed to install, trying alternative approach"
-    
-    # If packages fail, try building from MXE source
-    log "Falling back to manual MXE build (this will take longer)"
-    cd /tmp
-    git clone https://github.com/mxe/mxe.git
-    cd mxe
-    make MXE_TARGETS='x86_64-w64-mingw32.static' \
-         MXE_PLUGIN_DIRS=plugins/gcc12 \
-         cc qtbase qtsvg boost glib libzip libusb1 libftdi1 -j$(nproc)
-    export PATH="/tmp/mxe/usr/bin:$PATH"
-}
+log "Building MXE toolchain (this will take 20-30 minutes)..."
 
-# Set up MXE environment
-export PATH="/usr/lib/mxe/usr/bin:$PATH"
+# Build only the packages we need
+make -j$(nproc) \
+    MXE_TARGETS='x86_64-w64-mingw32.static' \
+    MXE_PLUGIN_DIRS='plugins/gcc13' \
+    cc \
+    qtbase \
+    qtsvg \
+    boost \
+    glib \
+    libzip \
+    libusb1 \
+    libftdi1
+
+# Set up environment
+export PATH="/tmp/mxe/usr/bin:$PATH"
 export TARGET="x86_64-w64-mingw32.static"
-export PREFIX="/usr/lib/mxe/usr/$TARGET"
+export PREFIX="/tmp/mxe/usr/$TARGET"
 
-# Build libserialport
-cd "$GITHUB_WORKSPACE" || cd /work || cd "$(pwd)"
+# Go back to workspace
+cd "$GITHUB_WORKSPACE" || cd "$(pwd)"
+
+log "Building libserialport..."
 git clone --depth 1 -b "$LIBSERIALPORT_REF" https://github.com/sigrokproject/libserialport.git
 cd libserialport
 ./autogen.sh
@@ -50,7 +44,7 @@ cd libserialport
 make -j$(nproc) && make install
 cd ..
 
-# Build libsigrok
+log "Building libsigrok..."
 if [[ "$LIBSIGROK_REPO" == */* ]]; then
     git clone --depth 1 -b "$LIBSIGROK_REF" "https://github.com/$LIBSIGROK_REPO.git" libsigrok
 else
@@ -62,7 +56,7 @@ cd libsigrok
 make -j$(nproc) && make install
 cd ..
 
-# Build libsigrokdecode (may fail on Windows, that's OK)
+log "Building libsigrokdecode (optional)..."
 git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/libsigrokdecode.git
 cd libsigrokdecode
 ./autogen.sh
@@ -70,7 +64,7 @@ cd libsigrokdecode
 make -j$(nproc) && make install || true
 cd ..
 
-# Build PulseView
+log "Building PulseView..."
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git
 cd pulseview
 mkdir build && cd build
@@ -84,8 +78,9 @@ $TARGET-cmake \
 make -j$(nproc) && make install
 
 # Package
+log "Creating Windows package..."
 mkdir -p "${OUT_DIR:-$HOME/out}/windows/amd64"
 cd install
 zip -r "${OUT_DIR:-$HOME/out}/windows/amd64/PulseView-Windows-x86_64.zip" .
 
-log "Windows build completed"
+log "Windows build completed successfully"

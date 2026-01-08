@@ -75,12 +75,25 @@ fi
 
 $BREW_PREFIX/opt/qt@5/bin/macdeployqt "$APP_BUNDLE" -always-overwrite
 
+# Remove quarantine attribute to prevent "damaged" warning
+log "Removing quarantine attributes"
+xattr -cr "$APP_BUNDLE"
+
+# Ad-hoc sign the app (no certificate needed for local use)
+log "Ad-hoc signing the application"
+codesign --force --deep --sign - "$APP_BUNDLE" || log "Warning: codesign failed, app may show security warning"
+
 mkdir -p "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH"
 cp -r "$APP_BUNDLE" "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH/"
 
 if command -v hdiutil &> /dev/null; then
     DMG_NAME="PulseView-macOS-$MAC_ARCH.dmg"
+    log "Creating DMG: $DMG_NAME"
     hdiutil create -volname "PulseView" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$DMG_NAME"
+    
+    # Remove quarantine from DMG as well
+    xattr -c "$DMG_NAME" || true
+    
     mv "$DMG_NAME" "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH/"
 fi
 
