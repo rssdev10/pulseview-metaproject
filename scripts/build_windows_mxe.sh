@@ -14,15 +14,16 @@ if [ ! -d "/tmp/mxe" ]; then
     log "Building MXE toolchain (this will take 20-30 minutes)..."
     
     # Build only the packages we need
+    # Note: Order matters - dependencies must come before dependent packages
     make -j$(nproc) \
         MXE_TARGETS='x86_64-w64-mingw32.static' \
         MXE_PLUGIN_DIRS='plugins/gcc13' \
         cc \
-        qtbase \
-        qtsvg \
+        glib \
         glibmm \
         boost \
-        glib \
+        qtbase \
+        qtsvg \
         libzip \
         libusb1 \
         libftdi1
@@ -57,6 +58,14 @@ cd libsigrok
 ./autogen.sh
 ./configure --host=$TARGET --prefix=$PREFIX --enable-cxx
 make -j$(nproc) && make install
+
+# Verify C++ bindings were built
+if [ ! -f "$PREFIX/lib/pkgconfig/libsigrokcxx.pc" ]; then
+    log "ERROR: libsigrokcxx.pc not found. C++ bindings may have failed to build."
+    ls -la "$PREFIX/lib/pkgconfig/" || true
+    exit 1
+fi
+log "✓ libsigrokcxx.pc found at $PREFIX/lib/pkgconfig/libsigrokcxx.pc"
 cd ..
 
 # Skip libsigrokdecode on Windows - it requires Python headers
