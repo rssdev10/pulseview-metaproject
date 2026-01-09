@@ -79,7 +79,12 @@ $BREW_PREFIX/opt/qt@5/bin/macdeployqt "$APP_BUNDLE" -always-overwrite
 # libsigrokdecode requires Python to run protocol decoders (--disable-python only disables Python *bindings*)
 # We need to include Python.framework in the bundle
 log "Bundling Python framework for libsigrokdecode"
-PYTHON_VERSION=$(ls $BREW_PREFIX/opt/ | grep "python@" | head -1)
+PYTHON_VERSION=$(ls $BREW_PREFIX/opt/ | grep "^python@" | sort -V | tail -1)
+if [ -z "$PYTHON_VERSION" ]; then
+    # Fallback: try without @ sign
+    PYTHON_VERSION=$(ls $BREW_PREFIX/opt/ | grep "^python" | grep -v "^python@" | head -1)
+fi
+
 if [ -n "$PYTHON_VERSION" ]; then
     PYTHON_FW="$BREW_PREFIX/opt/$PYTHON_VERSION/Frameworks/Python.framework"
     if [ -d "$PYTHON_FW" ]; then
@@ -92,8 +97,10 @@ if [ -n "$PYTHON_VERSION" ]; then
         if [ -f "$SIGROKDECODE_DYLIB" ]; then
             PYTHON_PATH=$(otool -L "$SIGROKDECODE_DYLIB" | grep "Python.framework" | awk '{print $1}')
             if [ -n "$PYTHON_PATH" ]; then
-                log "Updating libsigrokdecode Python.framework path"
-                install_name_tool -change "$PYTHON_PATH" "@loader_path/../Frameworks/Python.framework/Versions/3.11/Python" "$SIGROKDECODE_DYLIB"
+                # Extract Python version from the path (e.g., 3.11 or 3.14)
+                PYTHON_VER=$(echo "$PYTHON_PATH" | grep -oE '/Versions/[0-9.]+/' | grep -oE '[0-9.]+')
+                log "Updating libsigrokdecode Python.framework path (version $PYTHON_VER)"
+                install_name_tool -change "$PYTHON_PATH" "@loader_path/../Frameworks/Python.framework/Versions/$PYTHON_VER/Python" "$SIGROKDECODE_DYLIB"
             fi
         fi
     else
@@ -105,7 +112,8 @@ fi
 
 # Remove quarantine attribute to prevent "damaged" warning
 log "Removing quarantine attributes"
-xattr -cr "$APP_BUNDLE"
+find "$APP_BUNDLE" -type f -exec xattr -c {} \; 2>/dev/null || true
+find "$APP_BUNDLE" -type d -exec xattr -c {} \; 2>/dev/null || true
 
 # Ad-hoc sign the app (no certificate needed for local use)
 log "Ad-hoc signing the application"

@@ -97,13 +97,10 @@ fi
 log "✓ libsigrokcxx.pc found"
 cd ..
 
-log "Building libsigrokdecode..."
-git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/libsigrokdecode.git
-cd libsigrokdecode
-./autogen.sh
-./configure --host=$TARGET --prefix=$PREFIX --disable-python
-make -j$(nproc) && make install
-cd ..
+# Note: Skipping libsigrokdecode for Windows
+# libsigrokdecode requires Python 3 development headers which are not available in MXE
+# PulseView will be built with -DENABLE_DECODE=OFF (protocol decoding disabled on Windows)
+log "Skipping libsigrokdecode (requires Python, not available in MXE)"
 
 log "Building PulseView..."
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git
@@ -117,6 +114,7 @@ export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 $TARGET-cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=install \
+    -DENABLE_DECODE=OFF \
     ..
 
 make -j$(nproc) && make install
