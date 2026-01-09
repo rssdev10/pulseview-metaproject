@@ -122,7 +122,8 @@ log "Ad-hoc signing the application"
 codesign --force --deep --sign - "$APP_BUNDLE" || log "Warning: codesign failed, app may show security warning"
 
 mkdir -p "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH"
-cp -r "$APP_BUNDLE" "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH/"
+# Use -P to preserve symlinks and avoid following broken links in Python.framework
+cp -r -P "$APP_BUNDLE" "${OUT_DIR:-$HOME/out}/macos/$MAC_ARCH/"
 
 if command -v hdiutil &> /dev/null; then
     DMG_NAME="PulseView-macOS-$MAC_ARCH.dmg"
