@@ -24,7 +24,7 @@ if [ ! -d "$MXE_DIR" ]; then
     
     # Build only what we need - the key optimization for speed
     # Skip: doc, fonts, nsis, imagemagick, opencv, etc.
-    # Keep only: gcc, glib, glibmm, boost, qt5, libusb, libftdi, libzip
+    # Keep only: gcc, glib, glibmm, boost, qt5, libusb, libftdi, libzip, doxygen
     make -j$(nproc) \
         MXE_TARGETS='x86_64-w64-mingw32.static' \
         MXE_PLUGIN_DIRS='plugins/gcc13' \
@@ -37,7 +37,8 @@ if [ ! -d "$MXE_DIR" ]; then
         libusb1 \
         libftdi1 \
         qtbase \
-        qtsvg
+        qtsvg \
+        doxygen
     
     # Verify critical components
     if [ ! -f "usr/bin/x86_64-w64-mingw32.static-gcc" ]; then

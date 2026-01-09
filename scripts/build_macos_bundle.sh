@@ -75,6 +75,23 @@ fi
 
 $BREW_PREFIX/opt/qt@5/bin/macdeployqt "$APP_BUNDLE" -always-overwrite
 
+# Remove Python framework references bundled by macdeployqt
+# libsigrokdecode was built with --disable-python, but macdeployqt may have included framework links
+find "$APP_BUNDLE/Contents/Frameworks" -name "*Python*" -o -name "*python*" | while read f; do
+    log "Removing Python reference: $f"
+    rm -rf "$f"
+done 2>/dev/null || true
+
+# Also remove any otool references to Python framework
+log "Checking and fixing library references"
+for lib in "$APP_BUNDLE/Contents/Frameworks"/*.dylib; do
+    if [ -f "$lib" ]; then
+        if otool -L "$lib" 2>/dev/null | grep -i python; then
+            log "WARNING: $lib still references Python - may cause runtime issues"
+        fi
+    fi
+done
+
 # Remove quarantine attribute to prevent "damaged" warning
 log "Removing quarantine attributes"
 xattr -cr "$APP_BUNDLE"
