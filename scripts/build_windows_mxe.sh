@@ -115,8 +115,6 @@ $TARGET-cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=install \
     -DCMAKE_PREFIX_PATH="$PREFIX" \
-    -DPKG_CONFIG_EXECUTABLE="$MXE_DIR/usr/bin/$TARGET-pkg-config" \
-    -DPKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
     -DENABLE_DECODE=OFF \
     ..
 
