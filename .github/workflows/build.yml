@@ -121,7 +121,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             git ca-certificates bash coreutils autoconf automake libtool libtool-bin pkg-config \
-            autopoint gperf intltool lzip python3-mako ccache
+            autopoint gperf intltool lzip python3-mako ccache doxygen
 
       - name: Cache MXE build
         uses: actions/cache@v4
