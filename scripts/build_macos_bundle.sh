@@ -75,22 +75,33 @@ fi
 
 $BREW_PREFIX/opt/qt@5/bin/macdeployqt "$APP_BUNDLE" -always-overwrite
 
-# Remove Python framework references bundled by macdeployqt
-# libsigrokdecode was built with --disable-python, but macdeployqt may have included framework links
-find "$APP_BUNDLE/Contents/Frameworks" -name "*Python*" -o -name "*python*" | while read f; do
-    log "Removing Python reference: $f"
-    rm -rf "$f"
-done 2>/dev/null || true
-
-# Also remove any otool references to Python framework
-log "Checking and fixing library references"
-for lib in "$APP_BUNDLE/Contents/Frameworks"/*.dylib; do
-    if [ -f "$lib" ]; then
-        if otool -L "$lib" 2>/dev/null | grep -i python; then
-            log "WARNING: $lib still references Python - may cause runtime issues"
+# Bundle Python framework for libsigrokdecode
+# libsigrokdecode requires Python to run protocol decoders (--disable-python only disables Python *bindings*)
+# We need to include Python.framework in the bundle
+log "Bundling Python framework for libsigrokdecode"
+PYTHON_VERSION=$(ls $BREW_PREFIX/opt/ | grep "python@" | head -1)
+if [ -n "$PYTHON_VERSION" ]; then
+    PYTHON_FW="$BREW_PREFIX/opt/$PYTHON_VERSION/Frameworks/Python.framework"
+    if [ -d "$PYTHON_FW" ]; then
+        log "Copying Python.framework from $PYTHON_FW"
+        mkdir -p "$APP_BUNDLE/Contents/Frameworks"
+        cp -R "$PYTHON_FW" "$APP_BUNDLE/Contents/Frameworks/"
+        
+        # Fix library paths in libsigrokdecode to use bundled Python
+        SIGROKDECODE_DYLIB="$APP_BUNDLE/Contents/Frameworks/libsigrokdecode.4.dylib"
+        if [ -f "$SIGROKDECODE_DYLIB" ]; then
+            PYTHON_PATH=$(otool -L "$SIGROKDECODE_DYLIB" | grep "Python.framework" | awk '{print $1}')
+            if [ -n "$PYTHON_PATH" ]; then
+                log "Updating libsigrokdecode Python.framework path"
+                install_name_tool -change "$PYTHON_PATH" "@loader_path/../Frameworks/Python.framework/Versions/3.11/Python" "$SIGROKDECODE_DYLIB"
+            fi
         fi
+    else
+        log "WARNING: Python.framework not found at $PYTHON_FW"
     fi
-done
+else
+    log "WARNING: Could not detect Python version"
+fi
 
 # Remove quarantine attribute to prevent "damaged" warning
 log "Removing quarantine attributes"
