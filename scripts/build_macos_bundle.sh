@@ -90,15 +90,17 @@ if [ -n "$PYTHON_VERSION" ]; then
     if [ -d "$PYTHON_FW" ]; then
         log "Copying Python.framework from $PYTHON_FW"
         mkdir -p "$APP_BUNDLE/Contents/Frameworks"
-        cp -R "$PYTHON_FW" "$APP_BUNDLE/Contents/Frameworks/"
-        
+        # Preserve symlinks inside Python.framework to avoid broken target errors
+        cp -R -P "$PYTHON_FW" "$APP_BUNDLE/Contents/Frameworks/"
+
+        # Determine the actual Python version from the copied framework
+        PYTHON_VER=$(readlink "$PYTHON_FW/Versions/Current" 2>/dev/null || ls "$PYTHON_FW/Versions" | sort -V | tail -1)
+
         # Fix library paths in libsigrokdecode to use bundled Python
         SIGROKDECODE_DYLIB="$APP_BUNDLE/Contents/Frameworks/libsigrokdecode.4.dylib"
         if [ -f "$SIGROKDECODE_DYLIB" ]; then
             PYTHON_PATH=$(otool -L "$SIGROKDECODE_DYLIB" | grep "Python.framework" | awk '{print $1}')
-            if [ -n "$PYTHON_PATH" ]; then
-                # Extract Python version from the path (e.g., 3.11 or 3.14)
-                PYTHON_VER=$(echo "$PYTHON_PATH" | grep -oE '/Versions/[0-9.]+/' | grep -oE '[0-9.]+')
+            if [ -n "$PYTHON_PATH" ] && [ -n "$PYTHON_VER" ]; then
                 log "Updating libsigrokdecode Python.framework path (version $PYTHON_VER)"
                 install_name_tool -change "$PYTHON_PATH" "@loader_path/../Frameworks/Python.framework/Versions/$PYTHON_VER/Python" "$SIGROKDECODE_DYLIB"
             fi

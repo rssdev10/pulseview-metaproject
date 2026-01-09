@@ -111,7 +111,7 @@ mkdir build && cd build
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 
 # Use MXE's CMake wrapper
-$TARGET-cmake \
+PKG_CONFIG_PATH="$PKG_CONFIG_PATH" $TARGET-cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=install \
     -DENABLE_DECODE=OFF \
