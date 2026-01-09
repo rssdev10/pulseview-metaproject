@@ -96,8 +96,13 @@ fi
 log "✓ libsigrokcxx.pc found"
 cd ..
 
-# Skip libsigrokdecode on Windows - it requires Python headers
-log "Skipping libsigrokdecode (requires Python, not available on Windows static build)..."
+log "Building libsigrokdecode..."
+git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/libsigrokdecode.git
+cd libsigrokdecode
+./autogen.sh
+./configure --host=$TARGET --prefix=$PREFIX --disable-python
+make -j$(nproc) && make install
+cd ..
 
 log "Building PulseView..."
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git
@@ -111,7 +116,6 @@ export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 $TARGET-cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=install \
-    -DDISABLE_DECODER=ON \
     ..
 
 make -j$(nproc) && make install

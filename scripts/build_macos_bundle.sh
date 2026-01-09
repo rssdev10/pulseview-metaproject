@@ -29,13 +29,13 @@ clone_repo "$LIBSIGROK_REPO" "$LIBSIGROK_REF" libsigrok
 cd libsigrok && ./autogen.sh && ./configure --prefix=$BREW_PREFIX --enable-cxx
 make -j"$(sysctl -n hw.ncpu)" && sudo make install && cd ..
 
-# Skip libsigrokdecode on macOS - it requires Python framework
-# PulseView will build without protocol decoder support
-log "Skipping libsigrokdecode (requires Python framework, causes dyld errors)"
+git clone --depth 1 -b "$LIBSIGROKDECODE_REF" https://github.com/sigrokproject/libsigrokdecode.git
+cd libsigrokdecode && ./autogen.sh && ./configure --prefix=$BREW_PREFIX --disable-python
+make -j"$(sysctl -n hw.ncpu)" && sudo make install && cd ..
 
 git clone --depth 1 -b "$PULSEVIEW_REF" https://github.com/sigrokproject/pulseview.git
 cd pulseview && mkdir build && cd build
-cmake -DCMAKE_PREFIX_PATH=$BREW_PREFIX/opt/qt@5 -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Release -DDISABLE_DECODER=ON ..
+cmake -DCMAKE_PREFIX_PATH=$BREW_PREFIX/opt/qt@5 -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Release ..
 make -j"$(sysctl -n hw.ncpu)" && make install
 
 cd install
