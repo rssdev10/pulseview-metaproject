@@ -110,11 +110,17 @@ mkdir build && cd build
 # Ensure pkg-config can see MXE-built libraries
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 
+# Debug: verify pkg-config can find libsigrokcxx
+log "Testing pkg-config for libsigrokcxx:"
+$TARGET-pkg-config --exists libsigrokcxx && log "✓ pkg-config found libsigrokcxx" || log "✗ pkg-config CANNOT find libsigrokcxx"
+$TARGET-pkg-config --modversion libsigrokcxx 2>&1 | head -1 || true
+
 # Use MXE's CMake wrapper
 $TARGET-cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=install \
     -DCMAKE_PREFIX_PATH="$PREFIX" \
+    -DCMAKE_FIND_ROOT_PATH="$PREFIX" \
     -DENABLE_DECODE=OFF \
     ..
 
